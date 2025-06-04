@@ -9,12 +9,13 @@ class CaptureScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final shots = ref.watch(sessionProvider);
+    final secondsLeft = ref.read(sessionProvider.notifier).secondsLeft;
 
     return Scaffold(
       appBar: AppBar(title: const Text('촬영 중...')),
       body: Column(
         children: [
-          const CountdownTimer(),
+          CountdownTimer(seconds: secondsLeft),
           Expanded(
             child: shots.when(
               data: (list) => GridView.count(

@@ -1,5 +1,7 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image/image.dart' as img;
 import '../models/shot.dart';
 import '../providers/session_provider.dart';
 
@@ -26,10 +28,10 @@ class EditorScreen extends ConsumerWidget {
             children: FilterType.values.map((f) {
               return ElevatedButton(
                 onPressed: () {
-                  final edited = shot.original; // TODO: 필터 실제 적용
+                  final filtered = applyMockFilter(shot.original!, f);
                   ref
                       .read(sessionProvider.notifier)
-                      .updateEditedShot(index, edited!, f);
+                      .updateEditedShot(index, filtered, f);
                   Navigator.pop(context);
                 },
                 child: Text(f.name),
@@ -39,5 +41,24 @@ class EditorScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Uint8List applyMockFilter(Uint8List bytes, FilterType filter) {
+    final original = img.decodeImage(bytes)!;
+    img.Image filtered;
+    switch (filter) {
+      case FilterType.chrome:
+        filtered = img.sepia(original);
+        break;
+      case FilterType.mono:
+        filtered = img.grayscale(original);
+        break;
+      case FilterType.sepia:
+        filtered = img.sepia(original);
+        break;
+      default:
+        filtered = original;
+    }
+    return Uint8List.fromList(img.encodeJpg(filtered));
   }
 }
