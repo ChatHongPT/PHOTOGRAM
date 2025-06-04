@@ -1,40 +1,29 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 
-class CountdownTimer extends StatefulWidget {
-  const CountdownTimer({super.key});
-
-  @override
-  State<CountdownTimer> createState() => _CountdownTimerState();
-}
-
-class _CountdownTimerState extends State<CountdownTimer> {
-  late Timer _timer;
-  int _seconds = 60;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_seconds > 0) {
-        setState(() => _seconds--);
-      } else {
-        timer.cancel();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
+class CountdownTimer extends StatelessWidget {
+  final int seconds;
+  const CountdownTimer({super.key, required this.seconds});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(12),
-      child: Text('남은 시간: $_seconds초', style: const TextStyle(fontSize: 20)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white54, width: 1.5),
+        ),
+        child: Text(
+          '남은 시간: $seconds초',
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
     );
   }
 }

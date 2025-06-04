@@ -5,6 +5,7 @@ import '../models/shot.dart';
 import '../services/api_service.dart';
 import '../services/socket_service.dart';
 import '../screens/result_screen.dart';
+import 'dart:typed_data';
 
 final sessionProvider =
     StateNotifierProvider<SessionNotifier, AsyncValue<List<Shot>>>((ref) {
