@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/material.dart';
 import '../models/shot.dart';
 import '../services/api_service.dart';
 import '../services/socket_service.dart';
+import '../screens/result_screen.dart';
 
 final sessionProvider =
     StateNotifierProvider<SessionNotifier, AsyncValue<List<Shot>>>((ref) {
@@ -14,6 +16,8 @@ class SessionNotifier extends StateNotifier<AsyncValue<List<Shot>>> {
   final Ref ref;
   Timer? timer;
   int secondsLeft = 60;
+  final navigatorKey = GlobalKey<NavigatorState>();
+  String uuid = 'mock-session-id'; // TODO: 서버에서 받아오도록 구현
 
   Future<void> startSession() async {
     final shots = List.generate(4, (i) => Shot(index: i));
@@ -25,11 +29,13 @@ class SessionNotifier extends StateNotifier<AsyncValue<List<Shot>>> {
   void startCountdown() {
     timer?.cancel();
     secondsLeft = 60;
-    timer = Timer.periodic(const Duration(seconds: 1), (t) {
+    timer = Timer.periodic(const Duration(seconds: 1), (t) async {
       if (secondsLeft <= 0) {
         t.cancel();
+        await confirmAll();
       } else {
         secondsLeft--;
+        state = AsyncValue.data(state.value ?? []); // 상태 강제 갱신용
       }
     });
   }
@@ -51,5 +57,14 @@ class SessionNotifier extends StateNotifier<AsyncValue<List<Shot>>> {
       );
       state = AsyncValue.data(updated);
     });
+  }
+
+  Future<void> confirmAll() async {
+    await ref.read(apiServiceProvider).confirmSession(uuid);
+    navigatorKey.currentState?.pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => const ResultScreen(url: 'https://example.com/qr123'),
+      ),
+    );
   }
 }
