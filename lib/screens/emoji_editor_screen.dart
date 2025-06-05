@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/shot.dart';
+import 'dart:async'; // 타이머 사용을 위해 임포트
 
 class EmojiEditorScreen extends StatefulWidget {
   final List<Shot> shots; // Shot 리스트를 받을 필드
@@ -27,6 +28,38 @@ class _EmojiEditorScreenState extends State<EmojiEditorScreen> {
   // 현재 편집 중인 이모티콘의 리스트 내 인덱스 (없으면 null)
   int? _activeEmojiIndex;
 
+  // 60초 시간 제한을 위한 타이머 관련 변수
+  Timer? _timer;
+  int _remainingSeconds = 60;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // 화면이 dispose될 때 타이머 취소
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_remainingSeconds > 0) {
+          _remainingSeconds--;
+        } else {
+          _timer?.cancel();
+          // TODO: 시간 초과 시 다음 화면으로 이동 또는 처리 로직 추가
+          print('시간 초과! 이모티콘 편집 완료');
+          // Navigator.of(context).pop(); // 예시: 이전 화면으로 돌아가기
+          // Navigator.pushReplacementNamed(context, '/result'); // 예시: 결과 화면으로 이동
+        }
+      });
+    });
+  }
+
   // 사진 영역 Stack의 크기 및 위치를 얻기 위한 GlobalKey (필요 시 사용)
   // final GlobalKey _photoAreaKey = GlobalKey();
 
@@ -40,7 +73,7 @@ class _EmojiEditorScreenState extends State<EmojiEditorScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('이모티콘 추가'),
+        title: Text('이모티콘 추가 ($_remainingSeconds초)'), // 남은 시간 표시
         actions: [
           // TODO: 최종 완료 및 저장/공유 버튼 추가
           IconButton(
@@ -178,6 +211,61 @@ class _EmojiEditorScreenState extends State<EmojiEditorScreen> {
               ],
             ),
           ),
+          // TODO: 배치된 이모티콘 편집 테스트를 위한 임시 컨트롤 (크기 조절, 회전)
+          if (_activeEmojiIndex != null) // 활성 이모티콘이 있을 때만 표시
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 크기 감소 버튼
+                  IconButton(
+                    icon: const Icon(Icons.zoom_out),
+                    onPressed: () {
+                      setState(() {
+                        final currentEmojis = _addedEmojis[_currentIndex]!;
+                        double currentSize = currentEmojis[_activeEmojiIndex!]['size'];
+                        currentEmojis[_activeEmojiIndex!]['size'] = (currentSize - 5.0).clamp(10.0, 200.0);
+                      });
+                    },
+                  ),
+                  // 크기 증가 버튼
+                  IconButton(
+                    icon: const Icon(Icons.zoom_in),
+                    onPressed: () {
+                      setState(() {
+                        final currentEmojis = _addedEmojis[_currentIndex]!;
+                        double currentSize = currentEmojis[_activeEmojiIndex!]['size'];
+                        currentEmojis[_activeEmojiIndex!]['size'] = (currentSize + 5.0).clamp(10.0, 200.0);
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 20),
+                  // 반시계 방향 회전 버튼
+                  IconButton(
+                    icon: const Icon(Icons.rotate_left),
+                    onPressed: () {
+                      setState(() {
+                        final currentEmojis = _addedEmojis[_currentIndex]!;
+                        double currentRotation = currentEmojis[_activeEmojiIndex!]['rotation'];
+                        currentEmojis[_activeEmojiIndex!]['rotation'] = currentRotation - 0.1; // 라디안 값 감소
+                      });
+                    },
+                  ),
+                  // 시계 방향 회전 버튼
+                  IconButton(
+                    icon: const Icon(Icons.rotate_right),
+                    onPressed: () {
+                      setState(() {
+                        final currentEmojis = _addedEmojis[_currentIndex]!;
+                        double currentRotation = currentEmojis[_activeEmojiIndex!]['rotation'];
+                        currentEmojis[_activeEmojiIndex!]['rotation'] = currentRotation + 0.1; // 라디안 값 증가
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
           // 사진 인덱스 및 페이지 넘기기 컨트롤
           Padding(
             padding: const EdgeInsets.all(16.0),
