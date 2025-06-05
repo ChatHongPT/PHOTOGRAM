@@ -50,7 +50,7 @@ class LobbyScreen extends ConsumerWidget {
 
                       // App Title
                       const Text(
-                        'PhotoCapture',
+                        'PHOTOGRAM',
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
