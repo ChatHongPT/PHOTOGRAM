@@ -200,7 +200,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${list.length}/4',
+                  '${list.where((shot) => shot.original != null).length}/4',
                   style: const TextStyle(
                     color: Colors.green,
                     fontSize: 12,

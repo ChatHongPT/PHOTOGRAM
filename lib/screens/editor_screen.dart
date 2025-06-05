@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
-
 import '../models/shot.dart';
 import '../providers/session_provider.dart';
 
@@ -14,6 +13,13 @@ extension FilterLabel on FilterType {
     FilterType.sepia => '세피아',
     FilterType.chrome => '크롬',
   };
+
+  IconData get icon => switch (this) {
+    FilterType.none => Icons.photo,
+    FilterType.mono => Icons.filter_b_and_w,
+    FilterType.sepia => Icons.filter_vintage,
+    FilterType.chrome => Icons.auto_fix_high,
+  };
 }
 
 class EditorScreen extends ConsumerStatefulWidget {
@@ -23,16 +29,31 @@ class EditorScreen extends ConsumerStatefulWidget {
   ConsumerState<EditorScreen> createState() => _EditorState();
 }
 
-class _EditorState extends ConsumerState<EditorScreen> {
-  static const int _editLimit = 60; // 60초 편집 시간
+class _EditorState extends ConsumerState<EditorScreen>
+    with TickerProviderStateMixin {
+  static const int _editLimit = 60;
   late int _secondsLeft = _editLimit;
   Timer? _timer;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+  int? _selectedImageIndex;
 
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       setState(() => _secondsLeft--);
+      if (_secondsLeft <= 10) {
+        _pulseController.repeat(reverse: true);
+      }
       if (_secondsLeft == 0) {
         _finishAndConfirm();
       }
@@ -41,7 +62,14 @@ class _EditorState extends ConsumerState<EditorScreen> {
 
   void _finishAndConfirm() {
     _timer?.cancel();
+    _pulseController.stop();
     ref.read(sessionProvider.notifier).confirmSession();
+  }
+
+  Color _getTimerColor() {
+    if (_secondsLeft <= 10) return Colors.red;
+    if (_secondsLeft <= 20) return Colors.orange;
+    return Colors.green;
   }
 
   @override
@@ -50,189 +78,395 @@ class _EditorState extends ConsumerState<EditorScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        elevation: 0,
-        title: Row(
-          children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: CircularProgressIndicator(
-                    value: _secondsLeft / _editLimit,
-                    strokeWidth: 3,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
-                    backgroundColor: Colors.white24,
-                  ),
-                ),
-                Text(
-                  '$_secondsLeft',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(width: 18),
-            const Text(
-              '편집',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.check_circle,
-              size: 28,
-              color: Colors.orange,
-            ),
-            onPressed: _finishAndConfirm,
-            tooltip: '완료',
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(),
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: _buildPhotoGrid(shots),
           ),
         ],
       ),
-      body: GridView.builder(
-        padding: const EdgeInsets.all(20),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 18,
-          mainAxisSpacing: 18,
-          childAspectRatio: 0.8,
-        ),
-        itemCount: shots.length,
-        itemBuilder: (context, i) {
-          final s = shots[i];
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.07),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
+    );
+  }
+
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      expandedHeight: 120,
+      floating: false,
+      pinned: true,
+      backgroundColor: Colors.white,
+      foregroundColor: Colors.black87,
+      elevation: 0,
+      flexibleSpace: FlexibleSpaceBar(
+        titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+        title: Row(
+          children: [
+            AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _secondsLeft <= 10 ? _pulseAnimation.value : 1.0,
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _getTimerColor().withOpacity(0.1),
+                      border: Border.all(color: _getTimerColor(), width: 2),
+                    ),
                     child: Stack(
-                      fit: StackFit.expand,
+                      alignment: Alignment.center,
                       children: [
-                        if (s.edited != null)
-                          Image.memory(s.edited!, fit: BoxFit.cover)
-                        else if (s.original != null)
-                          Image.memory(s.original!, fit: BoxFit.cover)
-                        else
-                          const Center(child: CircularProgressIndicator()),
-                        if (s.filter != null && s.filter != FilterType.none)
-                          Positioned(
-                            top: 8,
-                            left: 8,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.6),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                s.filter!.label,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
+                        SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: CircularProgressIndicator(
+                            value: _secondsLeft / _editLimit,
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              _getTimerColor(),
                             ),
+                            backgroundColor: _getTimerColor().withOpacity(0.2),
                           ),
-                        // 사진 탭 감지
-                        Positioned.fill(
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () {
-                                print('사진 ${i} 탭됨');
-                                _showFilterDialog(context, s, i);
-                              },
-                              borderRadius: BorderRadius.circular(16), // ClipRRect와 동일한 bordeRadius 적용
-                            ),
+                        ),
+                        Text(
+                          '$_secondsLeft',
+                          style: TextStyle(
+                            color: _getTimerColor(),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
                           ),
                         ),
                       ],
                     ),
                   ),
+                );
+              },
+            ),
+            const SizedBox(width: 16),
+            const Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '편집',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  '사진을 탭해서 필터를 적용하세요',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        Container(
+          margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
+          child: ElevatedButton.icon(
+            onPressed: _finishAndConfirm,
+            icon: const Icon(Icons.check, size: 18),
+            label: const Text('완료'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhotoGrid(List<Shot> shots) {
+    return SliverGrid(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.75,
+      ),
+      delegate: SliverChildBuilderDelegate(
+        (context, index) => _buildPhotoCard(shots[index], index),
+        childCount: shots.length,
+      ),
+    );
+  }
+
+  Widget _buildPhotoCard(Shot shot, int index) {
+    final isSelected = _selectedImageIndex == index;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      transform: Matrix4.identity()..scale(isSelected ? 1.02 : 1.0),
+      child: Card(
+        elevation: isSelected ? 8 : 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: isSelected ? Colors.blue : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(flex: 3, child: _buildPhotoImage(shot, index)),
+            Expanded(flex: 1, child: _buildFilterChips(shot, index)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoImage(Shot shot, int index) {
+    return Container(
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (shot.edited != null)
+              Image.memory(shot.edited!, fit: BoxFit.cover)
+            else if (shot.original != null)
+              Image.memory(shot.original!, fit: BoxFit.cover)
+            else
+              Container(
+                color: Colors.grey[200],
+                child: const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                children: FilterType.values
-                    .where((f) => f != FilterType.none)
-                    .map(
-                      (f) => ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: s.filter == f
-                              ? Colors.orange
-                              : Colors.white,
-                          foregroundColor: s.filter == f
-                              ? Colors.white
-                              : Colors.black87,
-                          elevation: 0,
-                          minimumSize: const Size(48, 32),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: BorderSide(
-                              color: s.filter == f
-                                  ? Colors.orange
-                                  : Colors.grey.shade300,
-                              width: 1.4,
-                            ),
-                          ),
-                        ),
-                        onPressed: s.original == null
-                            ? null
-                            : () {
-                                final filtered = _applyFilter(s.original!, f);
-                                ref
-                                    .read(sessionProvider.notifier)
-                                    .updateEditedShot(i, filtered, f);
-                              },
-                        child: Text(
-                          f.label,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
+
+            // 필터 라벨
+            if (shot.filter != null && shot.filter != FilterType.none)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(shot.filter!.icon, color: Colors.white, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        shot.filter!.label,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    )
-                    .toList(),
+                    ],
+                  ),
+                ),
               ),
-            ],
-          );
-        },
+
+            // 탭 영역
+            Positioned.fill(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedImageIndex = _selectedImageIndex == index
+                          ? null
+                          : index;
+                    });
+                    _showFilterBottomSheet(context, shot, index);
+                  },
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(14),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(14),
+                      ),
+                      color: _selectedImageIndex == index
+                          ? Colors.blue.withOpacity(0.1)
+                          : Colors.transparent,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChips(Shot shot, int index) {
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        children: FilterType.values
+            .where((f) => f != FilterType.none)
+            .map((filter) => _buildFilterChip(shot, filter, index))
+            .toList(),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(Shot shot, FilterType filter, int index) {
+    final isSelected = shot.filter == filter;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      child: FilterChip(
+        selected: isSelected,
+        onSelected: shot.original == null
+            ? null
+            : (selected) {
+                if (selected) {
+                  final filtered = _applyFilter(shot.original!, filter);
+                  ref
+                      .read(sessionProvider.notifier)
+                      .updateEditedShot(index, filtered, filter);
+                }
+              },
+        label: Text(
+          filter.label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: isSelected ? Colors.white : Colors.grey[700],
+          ),
+        ),
+        avatar: Icon(
+          filter.icon,
+          size: 12,
+          color: isSelected ? Colors.white : Colors.grey[600],
+        ),
+        selectedColor: Colors.blue,
+        backgroundColor: Colors.grey[100],
+        checkmarkColor: Colors.white,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+      ),
+    );
+  }
+
+  void _showFilterBottomSheet(BuildContext context, Shot shot, int index) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '필터 선택',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            GridView.builder(
+              shrinkWrap: true,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.8,
+              ),
+              itemCount: FilterType.values.length,
+              itemBuilder: (context, i) {
+                final filter = FilterType.values[i];
+                final isSelected = shot.filter == filter;
+
+                return GestureDetector(
+                  onTap: () {
+                    if (shot.original != null) {
+                      final editedBytes = filter == FilterType.none
+                          ? shot.original!
+                          : _applyFilter(shot.original!, filter);
+                      ref
+                          .read(sessionProvider.notifier)
+                          .updateEditedShot(index, editedBytes, filter);
+                    }
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? Colors.blue : Colors.grey[300]!,
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          filter.icon,
+                          size: 32,
+                          color: isSelected ? Colors.blue : Colors.grey[600],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          filter.label,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: isSelected ? Colors.blue : Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }
@@ -248,44 +482,10 @@ class _EditorState extends ConsumerState<EditorScreen> {
     return Uint8List.fromList(img.encodeJpg(dst));
   }
 
-  // 사진 탭 시 필터 선택 다이얼로그 표시
-  void _showFilterDialog(BuildContext context, Shot shot, int index) {
-    showDialog(context: context, builder: (context) {
-      return AlertDialog(
-        title: const Text('필터 선택'),
-        content: SingleChildScrollView(
-          child: ListBody(
-            children: FilterType.values.map((filter) {
-              return GestureDetector(
-                onTap: () {
-                  print('사진 ${index}에 ${filter.label} 필터 적용');
-                  // SessionNotifier를 사용하여 필터 업데이트
-                  if (shot.original != null) {
-                    // 선택된 필터 적용
-                    final editedBytes = _applyFilter(shot.original!, filter);
-                    ref.read(sessionProvider.notifier).updateEditedShot(
-                      index, // 사진 인덱스
-                      editedBytes, // 필터가 적용된 이미지 데이터
-                      filter, // 선택된 필터 타입
-                    );
-                  }
-                  Navigator.of(context).pop(); // 다이얼로그 닫기
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(filter.label),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      );
-    });
-  }
-
   @override
   void dispose() {
     _timer?.cancel();
+    _pulseController.dispose();
     super.dispose();
   }
 }
