@@ -35,13 +35,6 @@ class SessionNotifier extends StateNotifier<AsyncValue<List<Shot>>> {
   // mock session id
   final String uuid = 'mock-session-id';
 
-  // ───────────────────────────────────────────────────────── start session
-  Future<void> startSession() async {
-    state = AsyncValue.data(List.generate(_maxShots, (i) => Shot(index: i)));
-    ref.read(socketServiceProvider).connect(onPhotoReceived);
-    _startPerShotTimer();
-  }
-
   // ───────────────────────────────────────────────────────── per-shot timer
   void _startPerShotTimer() {
     _tickTimer?.cancel();
