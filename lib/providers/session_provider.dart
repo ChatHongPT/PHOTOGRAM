@@ -2,82 +2,79 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../models/shot.dart';
 import '../services/api_service.dart';
 import '../services/socket_service.dart';
-import '../screens/editor_screen.dart' show EditorScreen; // ✅ EditorScreen만
+import '../screens/editor_screen.dart';
 import '../screens/result_screen.dart';
 
 final sessionProvider =
-    StateNotifierProvider<SessionNotifier, AsyncValue<List<Shot>>>(
-      (ref) => SessionNotifier(ref),
-    );
+    StateNotifierProvider<SessionNotifier, AsyncValue<List<Shot>>>((ref) {
+      return SessionNotifier(ref);
+    });
 
 class SessionNotifier extends StateNotifier<AsyncValue<List<Shot>>> {
-  SessionNotifier(this.ref) : super(const AsyncValue.loading());
+  SessionNotifier(this.ref) : super(const AsyncValue.loading()) {
+    // 소켓 연결과 콜백 등록
+    ref.read(socketServiceProvider).connect(onPhotoReceived);
+  }
 
-  // deps
   final Ref ref;
-  final navigatorKey = GlobalKey<NavigatorState>();
-
-  // constants
   static const int _maxShots = 4;
   static const int _perShotLimit = 10;
 
-  // state
   int _currentIndex = 0;
   int secondsLeft = _perShotLimit;
-
-  // timer
-  Timer? _tickTimer;
-
-  // mock session id
+  Timer? _timer;
+  final navigatorKey = GlobalKey<NavigatorState>();
   final String uuid = 'mock-session-id';
 
-  // ───────────────────────────────────────────────────────── per-shot timer
-  void _startPerShotTimer() {
-    _tickTimer?.cancel();
-    secondsLeft = _perShotLimit;
+  // ───────── 공개 래퍼 (CaptureScreen에서 호출)
+  void startShotTimer() => _startPerShotTimer();
+  void handleShotTimeout() => _handleTimeoutAndRequest();
 
-    _tickTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+  // ───────── 내부 타이머 관리
+  void _startPerShotTimer() {
+    _timer?.cancel();
+    secondsLeft = _perShotLimit;
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       secondsLeft--;
       state = AsyncValue.data(state.value ?? []);
-
       if (secondsLeft <= 0) {
-        timer.cancel();
-        // 4장이 이미 다 들어왔는지 실제 카운트로 판단
-        final captured =
-            state.value?.where((s) => s.original != null).length ?? 0;
-        if (captured == _maxShots) {
-          navigatorKey.currentState?.pushReplacement(
-            MaterialPageRoute(builder: (_) => const EditorScreen()),
-          );
-        }
-        _requestPhoto();
+        _handleTimeoutAndRequest();
       }
     });
   }
 
-  void _requestPhoto() {
-    if (_currentIndex >= _maxShots) return;
+  void _handleTimeoutAndRequest() {
+    _timer?.cancel();
     ref.read(socketServiceProvider).requestPhoto(_currentIndex);
+    _startPerShotTimer();
   }
 
-  // ───────────────────────────────────────────────────────── receive photo
-  void onPhotoReceived(int index, Uint8List bytes) {
-    state.whenData((shots) {
-      final updated = [...shots];
-      updated[index] = updated[index].copyWith(original: bytes);
-      state = AsyncValue.data(updated);
-    });
+  // ───────── 사진 수신
+  void onPhotoReceived(int idx, Uint8List bytes) {
+    final list = [
+      ...state.value ?? List.generate(_maxShots, (i) => Shot(index: i)),
+    ];
+    list[idx] = list[idx].copyWith(original: bytes);
+    state = AsyncValue.data(list);
 
-    _currentIndex++;
-    // 1~3번째 컷이면 다음 10초 타이머 재시작
-    if (_currentIndex < _maxShots) _startPerShotTimer();
+    _currentIndex = idx + 1;
+    if (_currentIndex >= _maxShots) {
+      _timer?.cancel();
+      // 4번째 사진까지 모두 수신 완료
+      print('4번째 사진까지 모두 수신 완료. 편집 화면으로 이동합니다.');
+      // EditorScreen으로 이동
+      navigatorKey.currentState?.pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => const EditorScreen(), // EditorScreen으로 이동
+        ),
+      );
+    }
   }
 
-  // ───────────────────────────────────────────────────────── store edits
+  // ───────── 편집 및 확인
   void updateEditedShot(int index, Uint8List edited, FilterType filter) {
     state.whenData((shots) {
       final updated = [...shots];
@@ -86,8 +83,7 @@ class SessionNotifier extends StateNotifier<AsyncValue<List<Shot>>> {
     });
   }
 
-  // ───────────────────────────────────────────────────────── confirm
-  Future<void> confirmAll() async {
+  Future<void> confirmSession() async {
     await ref.read(apiServiceProvider).confirmSession(uuid);
     navigatorKey.currentState?.pushReplacement(
       MaterialPageRoute(
@@ -96,9 +92,33 @@ class SessionNotifier extends StateNotifier<AsyncValue<List<Shot>>> {
     );
   }
 
+  // ───────── 세션 시작
+  Future<bool> connectToServer() async {
+    try {
+      final socketService = ref.read(socketServiceProvider);
+      // 소켓 서비스의 연결 상태 확인
+      final isConnected = await socketService.isConnected();
+      if (!isConnected) {
+        // 연결이 되어있지 않다면 다시 연결 시도
+        await socketService.connect(onPhotoReceived);
+      }
+      return true;
+    } catch (e) {
+      print('서버 연결 실패: $e');
+      return false;
+    }
+  }
+
+  Future<void> startSession() async {
+    state = AsyncValue.data(List.generate(_maxShots, (i) => Shot(index: i)));
+    _currentIndex = 0;
+    _startPerShotTimer();
+  }
+
   @override
   void dispose() {
-    _tickTimer?.cancel();
+    _timer?.cancel();
+    ref.read(socketServiceProvider).dispose();
     super.dispose();
   }
 }

@@ -41,7 +41,7 @@ class _EditorState extends ConsumerState<EditorScreen> {
 
   void _finishAndConfirm() {
     _timer?.cancel();
-    ref.read(sessionProvider.notifier).confirmAll();
+    ref.read(sessionProvider.notifier).confirmSession();
   }
 
   @override
@@ -163,6 +163,19 @@ class _EditorState extends ConsumerState<EditorScreen> {
                               ),
                             ),
                           ),
+                        // 사진 탭 감지
+                        Positioned.fill(
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                print('사진 ${i} 탭됨');
+                                _showFilterDialog(context, s, i);
+                              },
+                              borderRadius: BorderRadius.circular(16), // ClipRRect와 동일한 bordeRadius 적용
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -233,6 +246,41 @@ class _EditorState extends ConsumerState<EditorScreen> {
       _ => src,
     };
     return Uint8List.fromList(img.encodeJpg(dst));
+  }
+
+  // 사진 탭 시 필터 선택 다이얼로그 표시
+  void _showFilterDialog(BuildContext context, Shot shot, int index) {
+    showDialog(context: context, builder: (context) {
+      return AlertDialog(
+        title: const Text('필터 선택'),
+        content: SingleChildScrollView(
+          child: ListBody(
+            children: FilterType.values.map((filter) {
+              return GestureDetector(
+                onTap: () {
+                  print('사진 ${index}에 ${filter.label} 필터 적용');
+                  // SessionNotifier를 사용하여 필터 업데이트
+                  if (shot.original != null) {
+                    // 선택된 필터 적용
+                    final editedBytes = _applyFilter(shot.original!, filter);
+                    ref.read(sessionProvider.notifier).updateEditedShot(
+                      index, // 사진 인덱스
+                      editedBytes, // 필터가 적용된 이미지 데이터
+                      filter, // 선택된 필터 타입
+                    );
+                  }
+                  Navigator.of(context).pop(); // 다이얼로그 닫기
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(filter.label),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      );
+    });
   }
 
   @override
