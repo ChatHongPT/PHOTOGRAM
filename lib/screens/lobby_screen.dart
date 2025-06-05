@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/session_provider.dart';
-import 'capture_screen.dart';
+import 'connecting_screen.dart';
 
 class LobbyScreen extends ConsumerWidget {
   const LobbyScreen({super.key});
@@ -20,7 +20,6 @@ class LobbyScreen extends ConsumerWidget {
         child: SafeArea(
           child: Column(
             children: [
-              // Header Section
               Expanded(
                 flex: 2,
                 child: Container(
@@ -28,7 +27,6 @@ class LobbyScreen extends ConsumerWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // App Icon/Logo
                       Container(
                         width: 120,
                         height: 120,
@@ -47,10 +45,8 @@ class LobbyScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 24),
-
-                      // App Title
                       const Text(
-                        'PHOTOGRAM',
+                        'PHOTO',
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -59,8 +55,6 @@ class LobbyScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-
-                      // Subtitle
                       Text(
                         '완벽한 순간을 담아보세요',
                         style: TextStyle(
@@ -73,8 +67,6 @@ class LobbyScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-
-              // Main Action Section
               Expanded(
                 flex: 3,
                 child: Container(
@@ -91,7 +83,6 @@ class LobbyScreen extends ConsumerWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Features List
                         _buildFeatureItem(
                           Icons.flash_auto_rounded,
                           '자동 플래시',
@@ -110,8 +101,6 @@ class LobbyScreen extends ConsumerWidget {
                           '즉시 미리보기 및 저장',
                         ),
                         const SizedBox(height: 40),
-
-                        // Start Button
                         Container(
                           width: double.infinity,
                           height: 60,
@@ -129,47 +118,13 @@ class LobbyScreen extends ConsumerWidget {
                             ],
                           ),
                           child: ElevatedButton(
-                            onPressed: () async {
-                              await ref
-                                  .read(sessionProvider.notifier)
-                                  .startSession();
-                              if (context.mounted) {
-                                Navigator.push(
-                                  context,
-                                  PageRouteBuilder(
-                                    pageBuilder:
-                                        (
-                                          context,
-                                          animation,
-                                          secondaryAnimation,
-                                        ) => const CaptureScreen(),
-                                    transitionsBuilder:
-                                        (
-                                          context,
-                                          animation,
-                                          secondaryAnimation,
-                                          child,
-                                        ) {
-                                          return SlideTransition(
-                                            position: animation.drive(
-                                              Tween(
-                                                begin: const Offset(1.0, 0.0),
-                                                end: Offset.zero,
-                                              ).chain(
-                                                CurveTween(
-                                                  curve: Curves.easeInOut,
-                                                ),
-                                              ),
-                                            ),
-                                            child: child,
-                                          );
-                                        },
-                                    transitionDuration: const Duration(
-                                      milliseconds: 300,
-                                    ),
-                                  ),
-                                );
-                              }
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ConnectingScreen(),
+                                ),
+                              );
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
@@ -200,14 +155,9 @@ class LobbyScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 20),
-
-                        // Secondary Button
                         TextButton(
-                          onPressed: () {
-                            // Gallery or Settings navigation
-                          },
+                          onPressed: () {},
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
