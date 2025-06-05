@@ -5,7 +5,6 @@
 [![Flutter Version](https://img.shields.io/badge/Flutter-%3E%3D3.0.0-blue?style=flat-square&logo=flutter)](https://flutter.dev)
 [![Python Version](https://img.shields.io/badge/Python-3.7%2B-blue?style=flat-square&logo=python)](https://python.org)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=flat-square)](https://github.com/yourusername/photogram)
-
 [![Socket.IO](https://img.shields.io/badge/Socket-Communication-orange?style=flat-square&logo=socket.io)](https://socket.io)
 
 _라즈베리파이 기반 스마트 포토부스 시스템_ 📷✨
