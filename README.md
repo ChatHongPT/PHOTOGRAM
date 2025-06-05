@@ -2,11 +2,6 @@
 
 <div align="center">
 
-![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
-![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-A22846?style=for-the-badge&logo=raspberry-pi&logoColor=white)
-
 [![Flutter Version](https://img.shields.io/badge/Flutter-%3E%3D3.0.0-blue?style=flat-square&logo=flutter)](https://flutter.dev)
 [![Python Version](https://img.shields.io/badge/Python-3.7%2B-blue?style=flat-square&logo=python)](https://python.org)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=flat-square)](https://github.com/yourusername/photogram)
@@ -14,8 +9,6 @@
 [![Socket.IO](https://img.shields.io/badge/Socket-Communication-orange?style=flat-square&logo=socket.io)](https://socket.io)
 
 _라즈베리파이 기반 스마트 포토부스 시스템_ 📷✨
-
-[🚀 시작하기](#-시작하기) • [💫 기능](#-주요-기능) • [🏗️ 아키텍처](#️-시스템-아키텍처) • [📱 스크린샷](#-스크린샷) • [🛠️ 설치](#️-설치) • [🤝 기여](#-기여하기)
 
 </div>
 
