@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../services/socket_service.dart';
 import '../screens/editor_screen.dart';
 import '../screens/result_screen.dart';
+import '../screens/emoji_editor_screen.dart';
 
 final sessionProvider =
     StateNotifierProvider<SessionNotifier, AsyncValue<List<Shot>>>((ref) {
@@ -84,12 +85,22 @@ class SessionNotifier extends StateNotifier<AsyncValue<List<Shot>>> {
   }
 
   Future<void> confirmSession() async {
-    await ref.read(apiServiceProvider).confirmSession(uuid);
-    navigatorKey.currentState?.pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => const ResultScreen(url: 'https://example.com/qr123'),
-      ),
-    );
+    // TODO: API 서비스 호출 부분은 이모티콘 편집 후 최종 완료 시점으로 이동하거나 필요에 따라 조정
+    // await ref.read(apiServiceProvider).confirmSession(uuid);
+
+    // 이모티콘 편집 화면으로 이동 (편집된 사진 데이터와 함께)
+    final currentShots = state.value; // 현재 상태 (편집된 사진 포함)
+    if (currentShots != null) {
+      print('세션 완료. 이모티콘 편집 화면으로 이동합니다.');
+      navigatorKey.currentState?.pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => EmojiEditorScreen(shots: currentShots), // 데이터 전달하여 이동
+        ),
+      );
+    } else {
+      print('세션 상태 데이터가 없습니다. 이동하지 않습니다.');
+      // 또는 에러 처리 로직 추가
+    }
   }
 
   // ───────── 세션 시작
