@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/shot.dart';
-import 'gallery_screen.dart';
 
 class FrameSelectionScreen extends StatefulWidget {
   final List<Shot> shots;
@@ -199,8 +198,12 @@ class _FrameSelectionScreenState extends State<FrameSelectionScreen> {
                       const Padding(
                         padding: EdgeInsets.all(8.0),
                         child: Text(
-                          '원하는 프레임을 선택하세요:',
-                          style: TextStyle(color: Colors.white, fontSize: 18),
+                          '프레임을 선택하세요',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       Expanded(
@@ -208,29 +211,30 @@ class _FrameSelectionScreenState extends State<FrameSelectionScreen> {
                           scrollDirection: Axis.horizontal,
                           itemCount: _framePaths.length,
                           itemBuilder: (context, index) {
-                            final framePath = _framePaths[index];
                             return GestureDetector(
                               onTap: () {
                                 setState(() {
-                                  _selectedFramePath = framePath;
+                                  _selectedFramePath = _framePaths[index];
                                 });
                               },
                               child: Container(
-                                margin: const EdgeInsets.all(8.0),
+                                width: 100,
+                                margin: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   border: Border.all(
-                                    color: _selectedFramePath == framePath
-                                        ? Colors.blueAccent
-                                        : Colors.transparent,
-                                    width: 3,
+                                    color: _selectedFramePath == _framePaths[index]
+                                        ? Colors.blue
+                                        : Colors.white,
+                                    width: 2,
                                   ),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: Image.asset(
-                                  framePath,
-                                  width: 100,
-                                  height: 100,
-                                  fit: BoxFit.cover,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.asset(
+                                    _framePaths[index],
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
                               ),
                             );
@@ -240,45 +244,33 @@ class _FrameSelectionScreenState extends State<FrameSelectionScreen> {
                       Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: ElevatedButton(
-                          onPressed: () async {
-                            if (_selectedFramePath != null) {
-                              setState(() {
-                                _isSaving = true;
-                              });
-                              final combinedImageBytes = await _createAndSaveCombinedImage(_selectedFramePath!);
-                              if (combinedImageBytes != null) {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => GalleryScreen(
-                                      // combinedImageBytes: combinedImageBytes, // 이제 GalleryScreen에서 직접 로드
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('사진 저장에 실패했습니다.')),
-                                );
-                              }
-                              setState(() {
-                                _isSaving = false;
-                              });
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('프레임을 선택해주세요!')),
-                              );
-                            }
-                          },
+                          onPressed: _isSaving
+                              ? null
+                              : () async {
+                                  if (_selectedFramePath != null) {
+                                    setState(() {
+                                      _isSaving = true;
+                                    });
+                                    await _createAndSaveCombinedImage(_selectedFramePath!);
+                                    setState(() {
+                                      _isSaving = false;
+                                    });
+                                    Navigator.of(context).popUntil((route) => route.isFirst);
+                                  }
+                                },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blueAccent,
-                            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                              borderRadius: BorderRadius.circular(20),
                             ),
                           ),
                           child: const Text(
-                            '프레임 적용 및 저장',
-                            style: TextStyle(fontSize: 18, color: Colors.white),
+                            '저장하기',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),

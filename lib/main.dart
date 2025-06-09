@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/lobby_screen.dart';
-import 'screens/camera_screen.dart';
 import 'screens/emoji_editor_screen.dart';
 import 'screens/frame_selection_screen.dart';
 
@@ -27,7 +26,6 @@ class MyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const LobbyScreen(),
-        '/camera': (context) => const CameraScreen(),
         '/emoji_editor': (context) => const EmojiEditorScreen(shots: []),
         '/frame_selection': (context) => const FrameSelectionScreen(shots: [], addedEmojis: {}),
       },
