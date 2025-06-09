@@ -38,9 +38,13 @@ class SessionNotifier extends StateNotifier<AsyncValue<List<Shot>>> {
   void _startPerShotTimer() {
     _timer?.cancel();
     secondsLeft = _perShotLimit;
+    // 카운트다운 시작 시 초기 값 전송
+    ref.read(socketServiceProvider).sendCountdown(secondsLeft);
+
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       secondsLeft--;
       state = AsyncValue.data(state.value ?? []);
+      ref.read(socketServiceProvider).sendCountdown(secondsLeft); // 매 초마다 카운트다운 전송
       if (secondsLeft <= 0) {
         _handleTimeoutAndRequest();
       }
@@ -50,6 +54,7 @@ class SessionNotifier extends StateNotifier<AsyncValue<List<Shot>>> {
   void _handleTimeoutAndRequest() {
     _timer?.cancel();
     ref.read(socketServiceProvider).requestPhoto(_currentIndex);
+    // 다음 촬영이 시작되기 전에 다시 타이머를 시작하여 다음 카운트다운을 준비합니다.
     _startPerShotTimer();
   }
 
@@ -66,6 +71,7 @@ class SessionNotifier extends StateNotifier<AsyncValue<List<Shot>>> {
       _timer?.cancel();
       // 4번째 사진까지 모두 수신 완료
       print('4번째 사진까지 모두 수신 완료. 편집 화면으로 이동합니다.');
+      ref.read(socketServiceProvider).sendSessionEnd(); // 세션 종료 신호 전송
       // EditorScreen으로 이동
       navigatorKey.currentState?.pushReplacement(
         MaterialPageRoute(
@@ -92,11 +98,11 @@ class SessionNotifier extends StateNotifier<AsyncValue<List<Shot>>> {
     final currentShots = state.value; // 현재 상태 (편집된 사진 포함)
     if (currentShots != null) {
       print('세션 완료. 이모티콘 편집 화면으로 이동합니다.');
-    navigatorKey.currentState?.pushReplacement(
-      MaterialPageRoute(
+      navigatorKey.currentState?.pushReplacement(
+        MaterialPageRoute(
           builder: (_) => EmojiEditorScreen(shots: currentShots), // 데이터 전달하여 이동
-      ),
-    );
+        ),
+      );
     } else {
       print('세션 상태 데이터가 없습니다. 이동하지 않습니다.');
       // 또는 에러 처리 로직 추가
@@ -129,6 +135,7 @@ class SessionNotifier extends StateNotifier<AsyncValue<List<Shot>>> {
   @override
   void dispose() {
     _timer?.cancel();
+    ref.read(socketServiceProvider).sendSessionEnd(); // 앱 종료 시 세션 종료 신호 전송
     ref.read(socketServiceProvider).dispose();
     super.dispose();
   }

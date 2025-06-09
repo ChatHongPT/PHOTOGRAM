@@ -22,10 +22,12 @@ class SocketService {
   /// 소켓 연결 해제
   Future<void> disconnect() async {
     try {
-      await _socket?.close();
-      _socket = null;
-      _isConnected = false;
-      print('소켓 연결 해제 완료');
+      if (_socket != null) {
+        await _socket?.close();
+        _socket = null;
+        _isConnected = false;
+        print('소켓 연결 해제 완료');
+      }
     } catch (e) {
       print('소켓 연결 해제 중 오류: $e');
     }
@@ -127,9 +129,38 @@ class SocketService {
     
     try {
       _lastRequestedIndex = index;
-      _socket!.add([index]); // 1바이트 인덱스 전송
+      _socket!.add(Uint8List.fromList([0x01, index])); // 0x01 명령과 인덱스 전송
     } catch (e) {
       print('사진 요청 실패: $e');
+      _isConnected = false;
+    }
+  }
+
+  /// (3) 카운트다운 숫자 전송
+  void sendCountdown(int seconds) {
+    if (!_isConnected || _socket == null) {
+      print('소켓이 연결되어 있지 않습니다');
+      return;
+    }
+    try {
+      _socket!.add(Uint8List.fromList([0x02, seconds])); // 0x02 명령과 초 전송
+    } catch (e) {
+      print('카운트다운 전송 실패: $e');
+      _isConnected = false;
+    }
+  }
+
+  /// (4) 세션 종료 신호 전송
+  void sendSessionEnd() {
+    if (!_isConnected || _socket == null) {
+      print('소켓이 연결되어 있지 않습니다');
+      return;
+    }
+    try {
+      _socket!.add(Uint8List.fromList([0x03])); // 0x03 명령 전송
+      disconnect(); // 신호 전송 후 연결 해제
+    } catch (e) {
+      print('세션 종료 신호 전송 실패: $e');
       _isConnected = false;
     }
   }
