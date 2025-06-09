@@ -1,5 +1,7 @@
 # 📸 Photogram
 
+![image](https://github.com/user-attachments/assets/44c9d9cf-f2e1-44ca-a148-54d7d69926a3)
+
 <div align="center">
 
 [![Flutter Version](https://img.shields.io/badge/Flutter-%3E%3D3.0.0-blue?style=flat-square&logo=flutter)](https://flutter.dev)
@@ -173,12 +175,13 @@ hostname -I
 
 <div align="center">
 
-|  연결 화면  | 촬영 화면  |    편집 화면    |   결과 화면   |
-| :---------: | :--------: | :-------------: | :-----------: |
-|     🔌      |     📷     |       🎨        |      💾       |
-| _서버 연결_ | _4컷 촬영_ | _이모티콘 편집_ | _저장 & 공유_ |
+| 로비 화면 | 연결 화면 | 촬영 화면 | 필터 화면 | 
+|:---------:|:---------:|:---------:|:----------:|
+| <img src="https://github.com/user-attachments/assets/ec2a28d5-dbea-428a-8a29-296541d4459d" width="250" /> | <img src="https://github.com/user-attachments/assets/f30be290-173d-4aef-96fa-be2d4a374d06" width="250" /> | <img src="https://github.com/user-attachments/assets/ff69c985-d9de-4b95-b600-076b2779627d" width="250" /> | <img src="https://github.com/user-attachments/assets/e98a8651-0f37-4d85-bd97-eb8736f0af9e" width="250" /> |
 
-_스크린샷 추가 예정_
+| 이모티콘 편집 화면 | 프레임 선택 화면 | 결과 화면  | 
+|:---------:|:---------:|:---------:|
+| <img src="https://github.com/user-attachments/assets/77aea4e1-8523-4c0a-a3e5-c80c9bc7210b" width="250" /> | <img width="250" alt="스크린샷 2025-06-09 오후 8 39 17" src="https://github.com/user-attachments/assets/065dfd90-924c-416d-9fef-d4e9c4df1e67" /> | <img width="250" alt="스크린샷 2025-06-09 오후 8 39 36" src="https://github.com/user-attachments/assets/6a84779c-04be-4a20-9d61-11bcb9871002" /> |
 
 </div>
 
