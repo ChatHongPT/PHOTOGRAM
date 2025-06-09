@@ -92,11 +92,11 @@ class SessionNotifier extends StateNotifier<AsyncValue<List<Shot>>> {
     final currentShots = state.value; // 현재 상태 (편집된 사진 포함)
     if (currentShots != null) {
       print('세션 완료. 이모티콘 편집 화면으로 이동합니다.');
-      navigatorKey.currentState?.pushReplacement(
-        MaterialPageRoute(
+    navigatorKey.currentState?.pushReplacement(
+      MaterialPageRoute(
           builder: (_) => EmojiEditorScreen(shots: currentShots), // 데이터 전달하여 이동
-        ),
-      );
+      ),
+    );
     } else {
       print('세션 상태 데이터가 없습니다. 이동하지 않습니다.');
       // 또는 에러 처리 로직 추가

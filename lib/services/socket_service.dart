@@ -39,7 +39,7 @@ class SocketService {
     }
 
     try {
-      _onPhoto = onPhotoReceived;
+    _onPhoto = onPhotoReceived;
       print('소켓 연결 시도: $_host:$_port');
       
       // 새로운 연결 시도

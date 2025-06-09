@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/shot.dart';
 import 'dart:async'; // 타이머 사용을 위해 임포트
+import 'package:qr_flutter/qr_flutter.dart';
+import 'dart:convert';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
 
 class EmojiEditorScreen extends StatefulWidget {
   final List<Shot> shots; // Shot 리스트를 받을 필드
@@ -27,10 +31,20 @@ class _EmojiEditorScreenState extends State<EmojiEditorScreen> {
 
   // 현재 편집 중인 이모티콘의 리스트 내 인덱스 (없으면 null)
   int? _activeEmojiIndex;
+  // 현재 드래그 중인지 여부
+  bool _isDragging = false;
+  // 회전 모드 여부
+  bool _isRotating = false;
+  // 회전 시작 각도
+  double _startRotation = 0.0;
+  // 회전 시작 위치
+  Offset _startPosition = Offset.zero;
 
   // 60초 시간 제한을 위한 타이머 관련 변수
   Timer? _timer;
   int _remainingSeconds = 60;
+  bool _isEditingComplete = false;
+  String? _qrData;
 
   @override
   void initState() {
@@ -51,13 +65,20 @@ class _EmojiEditorScreenState extends State<EmojiEditorScreen> {
           _remainingSeconds--;
         } else {
           _timer?.cancel();
-          // TODO: 시간 초과 시 다음 화면으로 이동 또는 처리 로직 추가
-          print('시간 초과! 이모티콘 편집 완료');
-          // Navigator.of(context).pop(); // 예시: 이전 화면으로 돌아가기
-          // Navigator.pushReplacementNamed(context, '/result'); // 예시: 결과 화면으로 이동
+          _showQrCode();
         }
       });
     });
+  }
+
+  void _showQrCode() {
+    setState(() {
+      _isEditingComplete = true;
+    });
+  }
+
+  void _returnToLobby() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   // 사진 영역 Stack의 크기 및 위치를 얻기 위한 GlobalKey (필요 시 사용)
@@ -65,6 +86,13 @@ class _EmojiEditorScreenState extends State<EmojiEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isEditingComplete) {
+      return QRCodeScreen(
+        shots: widget.shots,
+        addedEmojis: _addedEmojis,
+      );
+    }
+
     // 여기서 전달받은 shots 데이터를 사용하여 이모티콘 편집 UI를 구현합니다.
     // 현재는 간단한 화면 표시만 합니다.
 
@@ -79,10 +107,7 @@ class _EmojiEditorScreenState extends State<EmojiEditorScreen> {
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: () {
-              // TODO: 이모티콘 적용된 최종 이미지 처리 로직
-              print('이모티콘 편집 완료 (미구현)');
-              // Navigator.of(context).pop(); // 예시: 이전 화면으로 돌아가기
-              // Navigator를 사용하여 다음 화면 (예: ResultScreen)으로 이동 가능
+              _showQrCode();
             },
           ),
         ],
@@ -155,54 +180,170 @@ class _EmojiEditorScreenState extends State<EmojiEditorScreen> {
 
                 // 현재 사진에 추가된 이모티콘 표시
                 ...(_addedEmojis[_currentIndex] ?? []).asMap().entries.map((entry) {
-                  final index = entry.key; // 이모티콘 리스트 내에서의 인덱스
+                  final index = entry.key;
                   final emojiData = entry.value;
                   final emoji = emojiData['emoji'] as String;
                   final position = emojiData['position'] as Offset;
                   final size = emojiData['size'] as double;
-                  final rotation = emojiData['rotation'] as double; // 회전 값 가져오기
+                  final rotation = emojiData['rotation'] as double;
+
                   return Positioned(
                     left: position.dx,
                     top: position.dy,
                     child: GestureDetector(
-                      // 이모티콘 탭 제스처 감지 (편집 활성화)
                       onTap: () {
                         setState(() {
-                          _activeEmojiIndex = index; // 해당 이모티콘을 활성 상태로 설정
-                          print('이모티콘 ${index} 탭됨. 편집 활성화.');
+                          _activeEmojiIndex = index;
+                          _isRotating = false;
                         });
                       },
-                      // 크기 조절 및 회전 제스처 감지
-                      onScaleUpdate: (details) {
+                      onPanStart: (details) {
+                        if (_activeEmojiIndex == index) {
+                          setState(() {
+                            _isDragging = true;
+                            _startPosition = details.localPosition;
+                          });
+                        }
+                      },
+                      onPanUpdate: (details) {
+                        if (_isDragging && _activeEmojiIndex == index) {
+                          setState(() {
+                            final currentEmojis = _addedEmojis[_currentIndex]!;
+                            final newPosition = Offset(
+                              position.dx + details.delta.dx,
+                              position.dy + details.delta.dy,
+                            );
+                            currentEmojis[index]['position'] = newPosition;
+                          });
+                        }
+                      },
+                      onPanEnd: (_) {
                         setState(() {
-                          final currentEmojis = _addedEmojis[_currentIndex]!;
-                          
-                          // 크기 업데이트
-                          if (details.scale != 1.0) { // 스케일 변화가 있을 때만 처리
-                            double newSize = size * details.scale;
-                            newSize = newSize.clamp(10.0, 200.0); // 예시: 최소 10, 최대 200
-                            if (_activeEmojiIndex == index) { // 활성 상태인 이모티콘만 크기 조절
-                              currentEmojis[index]['size'] = newSize;
-                            }
-                            // TODO: 크기 변경 시 위치 보정 필요 (중심 기준 스케일링)
-                          }
-                          
-                          // 회전 업데이트
-                          if (details.rotation != 0.0) { // 회전 변화가 있을 때만 처리
-                            if (_activeEmojiIndex == index) { // 활성 상태인 이모티콘만 회전
-                              currentEmojis[index]['rotation'] = details.rotation; // details.rotation은 라디안 값
-                            }
-                            // TODO: 회전 중심 설정 필요
-                          }
+                          _isDragging = false;
                         });
                       },
-                      child: Transform.rotate(
-                        angle: rotation, // 저장된 회전 값 (라디안) 적용
-                        // TODO: 회전 중심 설정 필요
-                        child: Text(
-                          emoji,
-                          style: TextStyle(fontSize: size), // 크기 적용
-                        ),
+                      child: Stack(
+                        children: [
+                          Transform.rotate(
+                            angle: rotation,
+                            child: Text(
+                              emoji,
+                              style: TextStyle(fontSize: size),
+                            ),
+                          ),
+                          if (_activeEmojiIndex == index)
+                            Positioned.fill(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Colors.blue,
+                                    width: 2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                            ),
+                          if (_activeEmojiIndex == index)
+                            Positioned(
+                              right: -20,
+                              top: -20,
+                              child: GestureDetector(
+                                onPanStart: (details) {
+                                  setState(() {
+                                    _isRotating = true;
+                                    _startRotation = rotation;
+                                    _startPosition = details.localPosition;
+                                  });
+                                },
+                                onPanUpdate: (details) {
+                                  if (_isRotating && _activeEmojiIndex == index) {
+                                    setState(() {
+                                      final currentEmojis = _addedEmojis[_currentIndex]!;
+                                      final center = Offset(size / 2, size / 2);
+                                      final startAngle = (_startPosition - center).direction;
+                                      final currentAngle = (details.localPosition - center).direction;
+                                      final angleDiff = currentAngle - startAngle;
+                                      currentEmojis[index]['rotation'] = _startRotation + angleDiff;
+                                    });
+                                  }
+                                },
+                                onPanEnd: (_) {
+                                  setState(() {
+                                    _isRotating = false;
+                                  });
+                                },
+                                child: Container(
+                                  width: 30,
+                                  height: 30,
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.rotate_right,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (_activeEmojiIndex == index)
+                            Positioned(
+                              right: -10,
+                              bottom: -10,
+                              child: GestureDetector(
+                                onPanStart: (details) {
+                                  setState(() {
+                                    _isDragging = true;
+                                    _startPosition = details.localPosition;
+                                  });
+                                },
+                                onPanUpdate: (details) {
+                                  if (_isDragging && _activeEmojiIndex == index) {
+                                    setState(() {
+                                      final currentEmojis = _addedEmojis[_currentIndex]!;
+                                      final delta = details.localPosition - _startPosition;
+                                      final scale = 1.0 + (delta.dx + delta.dy) / 100;
+                                      final newSize = (size * scale).clamp(20.0, 200.0);
+                                      currentEmojis[index]['size'] = newSize;
+                                    });
+                                  }
+                                },
+                                onPanEnd: (_) {
+                                  setState(() {
+                                    _isDragging = false;
+                                  });
+                                },
+                                child: Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.add,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   );
@@ -335,6 +476,215 @@ class _EmojiEditorScreenState extends State<EmojiEditorScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class QRCodeScreen extends StatefulWidget {
+  final List<Shot> shots;
+  final Map<int, List<Map<String, dynamic>>> addedEmojis;
+
+  const QRCodeScreen({
+    Key? key,
+    required this.shots,
+    required this.addedEmojis,
+  }) : super(key: key);
+
+  @override
+  State<QRCodeScreen> createState() => _QRCodeScreenState();
+}
+
+class _QRCodeScreenState extends State<QRCodeScreen> {
+  Timer? _timer;
+  int _remainingSeconds = 60;
+  String? _qrData;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+    _generateQRData();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_remainingSeconds > 0) {
+          _remainingSeconds--;
+        } else {
+          _timer?.cancel();
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+      });
+    });
+  }
+
+  void _generateQRData() {
+    final List<Map<String, dynamic>> editedShots = widget.shots.asMap().entries.map((entry) {
+      final index = entry.key;
+      final shot = entry.value;
+      return {
+        'index': index,
+        'hasEmojis': widget.addedEmojis.containsKey(index),
+        'emojis': widget.addedEmojis[index] ?? [],
+      };
+    }).toList();
+    
+    _qrData = jsonEncode({
+      'timestamp': DateTime.now().toIso8601String(),
+      'shots': editedShots,
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.blue.withOpacity(0.8),
+                    Colors.purple.withOpacity(0.8),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  // 4컷 사진 프레임
+                  Container(
+                    width: 300,
+                    height: 300,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: GridView.builder(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 4,
+                          mainAxisSpacing: 4,
+                        ),
+                        itemCount: widget.shots.length,
+                        itemBuilder: (context, index) {
+                          final shot = widget.shots[index];
+                          final displayImageBytes = shot.edited ?? shot.original;
+                          return Stack(
+                            children: [
+                              if (displayImageBytes != null)
+                                Image.memory(
+                                  displayImageBytes,
+                                  fit: BoxFit.cover,
+                                ),
+                              // 이모지 표시
+                              ...(widget.addedEmojis[index] ?? []).map((emojiData) {
+                                final emoji = emojiData['emoji'] as String;
+                                final position = emojiData['position'] as Offset;
+                                final size = emojiData['size'] as double;
+                                final rotation = emojiData['rotation'] as double;
+                                return Positioned(
+                                  left: position.dx,
+                                  top: position.dy,
+                                  child: Transform.rotate(
+                                    angle: rotation,
+                                    child: Text(
+                                      emoji,
+                                      style: TextStyle(fontSize: size),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // QR 코드
+                  if (_qrData != null)
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: QrImageView(
+                        data: _qrData!,
+                        version: QrVersions.auto,
+                        size: 200.0,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 30),
+            // 타이머 표시
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '$_remainingSeconds초 후 자동으로 종료됩니다',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+              child: const Text(
+                '확인',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

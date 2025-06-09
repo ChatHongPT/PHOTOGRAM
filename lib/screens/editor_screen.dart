@@ -169,25 +169,25 @@ class _EditorState extends ConsumerState<EditorScreen>
                     ],
                   ),
                   child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
                         width: 50,
                         height: 50,
-                        child: CircularProgressIndicator(
-                          value: _secondsLeft / _editLimit,
-                          strokeWidth: 3,
+                  child: CircularProgressIndicator(
+                    value: _secondsLeft / _editLimit,
+                    strokeWidth: 3,
                           valueColor: const AlwaysStoppedAnimation<Color>(
                             Colors.white,
                           ),
                           backgroundColor: Colors.white.withOpacity(0.3),
-                        ),
-                      ),
-                      Text(
-                        '$_secondsLeft',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '$_secondsLeft',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
@@ -212,17 +212,17 @@ class _EditorState extends ConsumerState<EditorScreen>
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  '편집',
-                  style: TextStyle(
-                    color: Colors.white,
+            const Text(
+              '편집',
+              style: TextStyle(
+                color: Colors.white,
                     fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ],
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1,
+              ),
             ),
+          ],
+        ),
           ),
           Container(
             decoration: BoxDecoration(
@@ -277,13 +277,13 @@ class _EditorState extends ConsumerState<EditorScreen>
   Widget _buildPhotoGrid(List<Shot> shots) {
     return GridView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.8,
-      ),
-      itemCount: shots.length,
+          childAspectRatio: 0.8,
+        ),
+        itemCount: shots.length,
       itemBuilder: (context, index) => _buildPhotoCard(shots[index], index),
     );
   }
@@ -336,21 +336,21 @@ class _EditorState extends ConsumerState<EditorScreen>
   Widget _buildPhotoImage(Shot shot, int index) {
     return Container(
       margin: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
             color: Colors.black.withOpacity(0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
             if (shot.edited != null)
               Image.memory(shot.edited!, fit: BoxFit.cover)
             else if (shot.original != null)
@@ -372,15 +372,15 @@ class _EditorState extends ConsumerState<EditorScreen>
 
             // 필터 표시
             if (shot.filter != null && shot.filter != FilterType.none)
-              Positioned(
-                top: 8,
-                left: 8,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
                     horizontal: 10,
                     vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
+                              ),
+                              decoration: BoxDecoration(
                     color: shot.filter!.color,
                     borderRadius: BorderRadius.circular(15),
                     boxShadow: [
@@ -443,13 +443,13 @@ class _EditorState extends ConsumerState<EditorScreen>
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
+                              child: Text(
                   shot.filter?.label ?? '필터 없음',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
                 ),
               ),
               Icon(
@@ -470,10 +470,10 @@ class _EditorState extends ConsumerState<EditorScreen>
                       Colors.grey.withOpacity(0.3),
                   shot.filter?.color ?? Colors.grey,
                 ],
-              ),
-            ),
-          ),
-        ],
+                              ),
+                            ),
+                          ),
+                      ],
       ),
     );
   }
