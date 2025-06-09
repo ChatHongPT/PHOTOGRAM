@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.photogram">
     <application
         android:label="photogram"
         android:name="${applicationName}"
@@ -42,4 +43,8 @@
             <data android:mimeType="text/plain"/>
         </intent>
     </queries>
+    <!-- Required to access the media gallery for Android 10+ -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <!-- Required to access specific media types for Android 13+ -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
 </manifest>

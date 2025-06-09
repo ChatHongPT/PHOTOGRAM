@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/shot.dart';
-import 'dart:async'; // 타이머 사용을 위해 임포트
-import 'package:qr_flutter/qr_flutter.dart';
-import 'dart:convert';
-import 'dart:ui' as ui;
-import 'dart:typed_data';
+import 'dart:async'; // 타이머 사용을 위해 임포트 (이모지 편집 화면 타이머)
+import 'frame_selection_screen.dart'; // 프레임 선택 화면으로 이동하기 위해 임포트
 
 class EmojiEditorScreen extends StatefulWidget {
   final List<Shot> shots; // Shot 리스트를 받을 필드
@@ -43,8 +40,6 @@ class _EmojiEditorScreenState extends State<EmojiEditorScreen> {
   // 60초 시간 제한을 위한 타이머 관련 변수
   Timer? _timer;
   int _remainingSeconds = 60;
-  bool _isEditingComplete = false;
-  String? _qrData;
 
   @override
   void initState() {
@@ -65,15 +60,18 @@ class _EmojiEditorScreenState extends State<EmojiEditorScreen> {
           _remainingSeconds--;
         } else {
           _timer?.cancel();
-          _showQrCode();
+          // 시간 초과 시에도 프레임 선택 화면으로 이동
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => FrameSelectionScreen(
+                shots: widget.shots,
+                addedEmojis: _addedEmojis,
+              ),
+            ),
+          );
         }
       });
-    });
-  }
-
-  void _showQrCode() {
-    setState(() {
-      _isEditingComplete = true;
     });
   }
 
@@ -86,13 +84,6 @@ class _EmojiEditorScreenState extends State<EmojiEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isEditingComplete) {
-      return QRCodeScreen(
-        shots: widget.shots,
-        addedEmojis: _addedEmojis,
-      );
-    }
-
     // 여기서 전달받은 shots 데이터를 사용하여 이모티콘 편집 UI를 구현합니다.
     // 현재는 간단한 화면 표시만 합니다.
 
@@ -106,8 +97,17 @@ class _EmojiEditorScreenState extends State<EmojiEditorScreen> {
           // TODO: 최종 완료 및 저장/공유 버튼 추가
           IconButton(
             icon: const Icon(Icons.check),
-            onPressed: () {
-              _showQrCode();
+            onPressed: () async {
+              // TODO: 이모지 편집 결과 저장 로직 제거, 프레임 선택 화면으로 이동
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => FrameSelectionScreen(
+                    shots: widget.shots, // 원본 사진 데이터
+                    addedEmojis: _addedEmojis, // 추가된 이모티콘 데이터
+                  ),
+                ),
+              );
             },
           ),
         ],
@@ -476,215 +476,6 @@ class _EmojiEditorScreenState extends State<EmojiEditorScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class QRCodeScreen extends StatefulWidget {
-  final List<Shot> shots;
-  final Map<int, List<Map<String, dynamic>>> addedEmojis;
-
-  const QRCodeScreen({
-    Key? key,
-    required this.shots,
-    required this.addedEmojis,
-  }) : super(key: key);
-
-  @override
-  State<QRCodeScreen> createState() => _QRCodeScreenState();
-}
-
-class _QRCodeScreenState extends State<QRCodeScreen> {
-  Timer? _timer;
-  int _remainingSeconds = 60;
-  String? _qrData;
-
-  @override
-  void initState() {
-    super.initState();
-    _startTimer();
-    _generateQRData();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        if (_remainingSeconds > 0) {
-          _remainingSeconds--;
-        } else {
-          _timer?.cancel();
-          Navigator.of(context).popUntil((route) => route.isFirst);
-        }
-      });
-    });
-  }
-
-  void _generateQRData() {
-    final List<Map<String, dynamic>> editedShots = widget.shots.asMap().entries.map((entry) {
-      final index = entry.key;
-      final shot = entry.value;
-      return {
-        'index': index,
-        'hasEmojis': widget.addedEmojis.containsKey(index),
-        'emojis': widget.addedEmojis[index] ?? [],
-      };
-    }).toList();
-    
-    _qrData = jsonEncode({
-      'timestamp': DateTime.now().toIso8601String(),
-      'shots': editedShots,
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.blue.withOpacity(0.8),
-                    Colors.purple.withOpacity(0.8),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // 4컷 사진 프레임
-                  Container(
-                    width: 300,
-                    height: 300,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(15),
-                      child: GridView.builder(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 4,
-                          mainAxisSpacing: 4,
-                        ),
-                        itemCount: widget.shots.length,
-                        itemBuilder: (context, index) {
-                          final shot = widget.shots[index];
-                          final displayImageBytes = shot.edited ?? shot.original;
-                          return Stack(
-                            children: [
-                              if (displayImageBytes != null)
-                                Image.memory(
-                                  displayImageBytes,
-                                  fit: BoxFit.cover,
-                                ),
-                              // 이모지 표시
-                              ...(widget.addedEmojis[index] ?? []).map((emojiData) {
-                                final emoji = emojiData['emoji'] as String;
-                                final position = emojiData['position'] as Offset;
-                                final size = emojiData['size'] as double;
-                                final rotation = emojiData['rotation'] as double;
-                                return Positioned(
-                                  left: position.dx,
-                                  top: position.dy,
-                                  child: Transform.rotate(
-                                    angle: rotation,
-                                    child: Text(
-                                      emoji,
-                                      style: TextStyle(fontSize: size),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // QR 코드
-                  if (_qrData != null)
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: QrImageView(
-                        data: _qrData!,
-                        version: QrVersions.auto,
-                        size: 200.0,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
-            // 타이머 표시
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '$_remainingSeconds초 후 자동으로 종료됩니다',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: const Text(
-                '확인',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
